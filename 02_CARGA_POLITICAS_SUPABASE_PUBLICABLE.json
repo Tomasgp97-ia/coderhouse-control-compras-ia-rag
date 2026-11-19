@@ -1,0 +1,167 @@
+{
+  "name": "PROYECTO FINAL — CARGA DE POLÍTICAS RAG",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "629d0d4a-f480-4b69-b4a8-d0fd25c69a88",
+      "name": "22 - Iniciar carga de políticas RAG"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3e9485a5-74f1-416a-bfa3-2f61fd267bc7",
+              "name": "contenido_documento",
+              "value": "POLÍTICAS DE DEMOSTRACIÓN — SISTEMA INTELIGENTE DE COMPRAS Bodega de Mendoza — Proyecto Final Coderhouse  1. OBJETIVO El sistema analiza inventarios, conteos físicos y programas de producción para identificar necesidades de abastecimiento de insumos secos. Su función es asistir al responsable de compras, no sustituir la autorización humana.  2. FUENTES DE INFORMACIÓN El stock del sistema proviene de una base de inventario leída en modo consulta. Los conteos físicos ingresan mediante Google Forms y se registran en Google Sheets. Las necesidades futuras provienen del cronograma semanal de producción. Las equivalencias relacionan descripciones del cronograma con códigos de inventario.  3. VALIDACIÓN DE INVENTARIO El saldo del sistema no implica disponibilidad física confirmada. Para aprobar un conteo deben verificarse los códigos de insumo, los lotes existentes, la cobertura de todos los lotes, la vigencia de la medición y los movimientos posteriores al conteo. Si falta alguna validación, el estado debe ser REVISAR y no se permite tomar el saldo físico como definitivo.  4. EQUIVALENCIAS DE INSUMOS Solo se utilizan equivalencias con estado APROBADO para recomendaciones de compra. Una equivalencia PENDIENTE o RECHAZADA bloquea la recomendación definitiva. No se permite inventar códigos ni inferir que dos descripciones similares corresponden al mismo material sin confirmación humana.  5. CÁLCULO DE NECESIDADES La necesidad teórica se calcula multiplicando las unidades previstas de producción por el consumo de insumo por unidad. El faltante teórico es el máximo entre cero y la necesidad menos el saldo del sistema. Este cálculo es preliminar: antes de recomendar una compra se deben considerar reservas, pedidos en tránsito, producción acumulada, disponibilidad física validada y fecha requerida.  6. CRITERIOS DE DECISIÓN REVISAR_DATOS: hay información incompleta, equivalencias pendientes, conteos no validados, discrepancias o producciones sin insumos identificados. PROPONER_COMPRA: existe un faltante positivo y se verificaron equivalencias aprobadas, cantidades, disponibilidad física, necesidades acumuladas y condiciones necesarias. La propuesta requiere autorización humana. SIN_FALTANTE_TEORICO: la necesidad identificada está cubierta por el saldo de referencia, pero esto no implica disponibilidad física confirmada si faltan controles.  7. AUTORIZACIÓN Y LIMITACIONES La automatización no emite órdenes de compra, no confirma precios ni proveedores y no modifica el inventario original. Las decisiones comerciales finales corresponden al responsable de compras. Cualquier acción sobre proveedores debe requerir aprobación humana.  8. ERRORES Y EXCEPCIONES Si falla una fuente, no se recuperan políticas, faltan datos, aparecen códigos desconocidos o los cálculos son ambiguos, el agente debe recomendar REVISAR_DATOS y explicar el motivo. No debe inventar información ni interpretar datos ausentes como valores cero.  9. SEGURIDAD Utilizar información ficticia o autorizada para demostraciones. Mantener separados los documentos originales y las planillas de trabajo. Registrar las decisiones y permitir trazabilidad de los resultados.  10. ESCALABILIDAD Simple Vector Store se utiliza únicamente para la demostración. Para producción se recomienda una base vectorial persistente, con permisos de acceso, copias de seguridad, monitoreo de costos y actualización controlada de documentos.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "aa36be2a-6880-4330-b6b3-bab8270aaee9",
+      "name": "23 - Documento de políticas de compras"
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.contenido_documento }}",
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        256,
+        384
+      ],
+      "id": "d953512f-1795-44b9-86b8-dba6b1733cfc",
+      "name": "26 - Cargar documento de políticas"
+    },
+    {
+      "parameters": {
+        "chunkSize": 500,
+        "chunkOverlap": 80,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        512,
+        480
+      ],
+      "id": "ab150edb-9597-4796-998a-bacadba3c119",
+      "name": "27 - Dividir políticas en fragmentos"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.4,
+      "position": [
+        96,
+        224
+      ],
+      "id": "090b4560-8210-4ef0-a114-e4e75efe2559",
+      "name": "32 - Almacenar políticas en Supabase"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        64,
+        400
+      ],
+      "id": "2e7929e0-ba99-4b47-b27e-bb5c6ed38cb8",
+      "name": "33 - Embeddings para Supabase"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "22 - Iniciar carga de políticas RAG": {
+      "main": [
+        [
+          {
+            "node": "23 - Documento de políticas de compras",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "23 - Documento de políticas de compras": {
+      "main": [
+        [
+          {
+            "node": "32 - Almacenar políticas en Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "26 - Cargar documento de políticas": {
+      "ai_document": [
+        [
+          {
+            "node": "32 - Almacenar políticas en Supabase",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "27 - Dividir políticas en fragmentos": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "26 - Cargar documento de políticas",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "33 - Embeddings para Supabase": {
+      "ai_embedding": [
+        [
+          {
+            "node": "32 - Almacenar políticas en Supabase",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
